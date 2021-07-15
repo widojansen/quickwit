@@ -1,10 +1,12 @@
 [workspace]
 
 members = [
+  "quickwit-actors",
   "quickwit-cli",
   "quickwit-cluster",
   "quickwit-core",
   "quickwit-index-config",
+  "quickwit-indexing",
   "quickwit-directories",
   "quickwit-metastore",
   "quickwit-proto",
