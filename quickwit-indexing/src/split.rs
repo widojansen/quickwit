@@ -21,6 +21,7 @@ use tempfile::TempDir;
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#[derive(Debug)]
 pub struct Split {
     pub directory: tempfile::TempDir,
 }

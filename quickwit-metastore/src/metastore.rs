@@ -28,9 +28,38 @@ use std::ops::Range;
 
 use async_trait::async_trait;
 use quickwit_index_config::IndexConfig;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de};
 
 use crate::MetastoreResult;
+
+#[derive(Debug, Clone)]
+#[derive(Default)]
+pub struct Checkpoint {
+    payload: Vec<u8>
+}
+
+
+impl Serialize for Checkpoint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+            let payload_base64 = base64::encode(&self.payload[..]);
+            serializer.serialize_str(&payload_base64)
+    }
+}
+
+impl<'de> Deserialize<'de> for Checkpoint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de> {
+        let payload_base64 = String::deserialize(deserializer)?;
+        let payload = base64::decode(payload_base64)
+            .map_err(|_decode_err| {
+              serde::de::Error::invalid_value(de::Unexpected::Str("not valid base64"), &"base64")
+            })?;
+        Ok(Checkpoint { payload })
+    }
+}
 
 /// An index metadata carries all meta data about an index.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -42,6 +71,8 @@ pub struct IndexMetadata {
     pub index_uri: String,
     /// The config used for this index.
     pub index_config: Box<dyn IndexConfig>,
+
+    pub checkpoint: Checkpoint,
 }
 
 /// A split metadata carries all meta data about a split.

@@ -2,6 +2,26 @@ use std::any::type_name;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use thiserror::Error;
+
+use crate::SendError;
+
+
+#[derive(Error, Debug)]
+pub enum MessageProcessError {
+    #[error("On Demand")]
+    OnDemand,
+    #[error("Downstream actor closed connection")]
+    DownstreamClosed,
+    #[error("Failure")]
+    Error(#[from] anyhow::Error)
+}
+
+impl From<SendError> for MessageProcessError {
+    fn from(_: SendError) -> Self {
+        MessageProcessError::DownstreamClosed
+    }
+}
 
 /// An actor has an internal state and processes a stream of message.
 ///

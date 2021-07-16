@@ -1,4 +1,8 @@
-use crate::Checkpoint;
+use std::sync::Arc;
+
+use quickwit_actors::Mailbox;
+use quickwit_metastore::Checkpoint;
+
 use crate::SourceId;
 
 // Quickwit
@@ -21,8 +25,13 @@ use crate::SourceId;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub struct Source;
+pub trait Source {
+    fn spawn(&self) -> anyhow::Result<()>;
+}
 
-pub(crate) async fn build_source(source_id: &SourceId, checkpoint: Checkpoint) -> anyhow::Result<Source> {
+pub(crate) async fn build_source(
+    source_id: &SourceId,
+    writer_mailbox: Mailbox<String>,
+    checkpoint: &Checkpoint) -> anyhow::Result<Arc<dyn Source>> {
     todo!();
 }

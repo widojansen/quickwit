@@ -28,6 +28,7 @@ use quickwit_common::extract_metastore_uri_and_index_id_from_index_uri;
 use quickwit_core::DocumentSource;
 use quickwit_index_config::DefaultIndexConfigBuilder;
 use quickwit_index_config::IndexConfig;
+use quickwit_metastore::Checkpoint;
 use quickwit_metastore::IndexMetadata;
 use quickwit_metastore::MetastoreUriResolver;
 use quickwit_proto::SearchRequest;
@@ -133,6 +134,7 @@ pub async fn create_index_cli(args: CreateIndexArgs) -> anyhow::Result<()> {
         index_id: index_id.to_string(),
         index_uri: args.index_uri.to_string(),
         index_config: args.index_config,
+        checkpoint: Checkpoint::default(),
     };
     create_index(metastore_uri, index_metadata).await?;
     Ok(())

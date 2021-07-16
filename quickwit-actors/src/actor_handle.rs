@@ -196,13 +196,15 @@ struct InnerActorHandle<Message, ObservableState> {
 /// Represents the cause of termination of an actor.
 pub enum ActorTermination {
     /// Process command returned false.
-    Graceful,
+    OnDemand,
     /// The actor process method returned an error.
     ActorError(anyhow::Error),
     /// The actor was killed by the kill switch.
     KillSwitch,
     /// All of the actor handle were dropped and no more message were available.
     Disconnect,
+
+    DownstreamClosed,
 }
 
 pub(crate) enum ActorMessage<Message> {

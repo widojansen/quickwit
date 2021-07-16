@@ -20,13 +20,11 @@
 
 
 mod actors;
+mod models;
 mod campaign;
 mod split;
-mod checkpoint;
-mod manifest;
 
-pub use self::checkpoint::Checkpoint;
-pub use self::manifest::Manifest;
+pub use crate::split::Split;
 
 pub type SourceId = String;
 pub type IndexId = String;

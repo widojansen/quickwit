@@ -23,6 +23,8 @@ record some progress if they are processing a large messsage.
 // TODO handle the case where an actor gracefully finished its work.
 // In this case, the kill switch should not be triggered even if there is no progress.
 
+use std::{error::Error, fmt::Display};
+
 use tokio::time::Duration;
 
 mod actor;
@@ -34,7 +36,7 @@ mod sync_actor;
 #[cfg(test)]
 mod tests;
 
-pub use actor::{Actor, KillSwitch, Progress};
+pub use actor::{Actor, KillSwitch, Progress, MessageProcessError};
 pub(crate) use actor_handle::ActorMessage;
 pub use actor_handle::{mock_mailbox, ActorHandle, DebugInbox, Mailbox};
 pub use async_actor::AsyncActor;
@@ -52,4 +54,14 @@ pub const HEARTBEAT: Duration = if cfg!(test) {
 };
 
 /// Error returned when a message is sent to an actor that is detected as terminated.
+#[derive(Debug)]
 pub struct SendError;
+
+impl Display for SendError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Error for SendError {
+}

@@ -1,18 +1,3 @@
-use std::sync::Arc;
-
-use anyhow::Context;
-use anyhow::bail;
-use quickwit_actors::Actor;
-use quickwit_actors::Mailbox;
-use quickwit_actors::SyncActor;
-use quickwit_index_config::IndexConfig;
-use tantivy::Document;
-use tantivy::Index;
-use tantivy::IndexWriter;
-use tempfile::TempDir;
-
-use crate::split::Split;
-
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -33,6 +18,22 @@ use crate::split::Split;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
+
+use anyhow::Context;
+use anyhow::bail;
+use quickwit_actors::Actor;
+use quickwit_actors::Mailbox;
+use quickwit_actors::MessageProcessError;
+use quickwit_actors::SyncActor;
+use quickwit_index_config::IndexConfig;
+use tantivy::Document;
+use tantivy::Index;
+use tantivy::IndexWriter;
+use tempfile::TempDir;
+
+use crate::split::Split;
+
 struct Scratch {
     index_writer: IndexWriter,
     tempdir: TempDir,
@@ -52,9 +53,9 @@ impl Scratch {
 }
 
 pub struct IndexerParams {
-    index: String,
-    index_config: Arc<dyn IndexConfig>,
-    mem_budget_in_bytes: usize,
+    pub index: String,
+    pub index_config: Arc<dyn IndexConfig>,
+    pub mem_budget_in_bytes: usize,
 }
 
 #[derive(Default, Clone, Debug)]
@@ -70,7 +71,7 @@ pub struct Indexer {
 }
 
 impl Indexer {
-    fn new(params: IndexerParams, packager_mailbox: Mailbox<Split>) -> anyhow::Result<Indexer> {
+    pub fn new(params: IndexerParams, packager_mailbox: Mailbox<Split>) -> anyhow::Result<Indexer> {
         let mut indexer = Indexer {
             params,
             packager_mailbox,
@@ -115,11 +116,12 @@ impl SyncActor for Indexer {
         &mut self,
         doc_json: String,
         progress: &quickwit_actors::Progress,
-    ) -> anyhow::Result<bool> {
-        let doc = self.params.index_config.doc_from_json(&doc_json)?;
+    ) -> Result<(), MessageProcessError> {
+        let doc = self.params.index_config.doc_from_json(&doc_json)
+            .with_context(|| doc_json)?;
         let scratch = self.scratch()?;
         scratch.index_writer.add_document(doc);
-        Ok(true)
+        Ok(())
     }
 
     fn finalize(&mut self) -> anyhow::Result<()> {
@@ -129,7 +131,7 @@ impl SyncActor for Indexer {
         let split = Split {
             directory: scratch.tempdir,
         };
-        self.packager_mailbox.send_blocking(split);
+        self.packager_mailbox.send_blocking(split)?;
         Ok(())
     }
 }

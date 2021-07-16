@@ -18,3 +18,33 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use quickwit_actors::Actor;
+use quickwit_actors::Mailbox;
+use quickwit_actors::SyncActor;
+use crate::models::Manifest;
+
+use crate::split::Split;
+
+pub struct Packager {
+    pub uploader_mailbox: Mailbox<Manifest>,
+}
+
+impl Actor for Packager {
+    type Message = Split;
+
+    type ObservableState = ();
+
+    fn observable_state(&self) -> Self::ObservableState {
+        ()
+    }
+}
+
+impl SyncActor for Packager {
+    fn process_message(
+        &mut self,
+        message: Self::Message,
+        progress: &quickwit_actors::Progress,
+    ) -> Result<(), quickwit_actors::MessageProcessError> {
+        Ok(())
+    }
+}

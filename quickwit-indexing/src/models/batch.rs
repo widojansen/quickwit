@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -20,5 +18,6 @@ use std::sync::Arc;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#[derive(Debug, Clone)]
-pub struct Checkpoint(Arc<Vec<u8>>);
+pub struct Batch {
+    docs: Vec<String>,
+}

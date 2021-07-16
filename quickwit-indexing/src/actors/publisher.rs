@@ -2,10 +2,11 @@ use std::sync::Arc;
 
 use quickwit_actors::Actor;
 use quickwit_actors::AsyncActor;
+use quickwit_actors::MessageProcessError;
 use quickwit_metastore::Metastore;
 use async_trait::async_trait;
 
-use crate::Manifest;
+use crate::models::Manifest;
 
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
@@ -28,15 +29,7 @@ use crate::Manifest;
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pub struct Publisher {
-    metastore: Arc<dyn Metastore>
-}
-
-impl Publisher {
-    pub fn new(metastore: Arc<dyn Metastore>) -> Publisher {
-        Publisher {
-            metastore,
-        }
-    }
+    pub metastore: Arc<dyn Metastore>
 }
 
 impl Actor for Publisher {
@@ -55,7 +48,7 @@ impl AsyncActor for Publisher {
         &mut self,
         message: Self::Message,
         progress: &quickwit_actors::Progress,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<(), MessageProcessError> {
         todo!();
     }
 }

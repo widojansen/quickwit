@@ -2674,6 +2674,7 @@ dependencies = [
  "async-trait",
  "flume",
  "futures",
+ "thiserror",
  "tokio",
  "tracing",
  "uuid",
@@ -2840,6 +2841,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64",
  "mockall 0.9.1",
  "quickwit-index-config",
  "quickwit-storage",

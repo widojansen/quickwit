@@ -1,3 +1,4 @@
+use crate::actor::MessageProcessError;
 use crate::actor_handle::{ActorHandle, ActorTermination};
 use crate::Mailbox;
 use crate::{Actor, ActorMessage, KillSwitch, Progress};
@@ -22,7 +23,7 @@ pub trait AsyncActor: Actor + Sized {
         &mut self,
         message: Self::Message,
         progress: &Progress,
-    ) -> anyhow::Result<bool>;
+    ) -> Result<(), MessageProcessError>;
 
     #[doc(hidden)]
     fn spawn(
@@ -76,15 +77,20 @@ async fn async_actor_loop<A: AsyncActor>(
         match async_msg_res {
             Ok(Ok(ActorMessage::Message(message))) => {
                 match actor.process_message(message, &progress).await {
-                    Ok(true) => {}
-                    Ok(false) => {
-                        return ActorTermination::Graceful;
+                    Ok(()) => (),
+                    Err(MessageProcessError::OnDemand) => {
+                        return ActorTermination::OnDemand
+                    },
+                    Err(MessageProcessError::Error(err)) => {
+                        kill_switch.kill();
+                        return ActorTermination::ActorError(err);
                     }
-                    Err(actor_error) => {
-                        return ActorTermination::ActorError(actor_error);
+                    Err(MessageProcessError::DownstreamClosed) => {
+                        kill_switch.kill();
+                        return ActorTermination::DownstreamClosed;
                     }
                 }
-            }
+            },
             Ok(Ok(ActorMessage::Observe(oneshot))) => {
                 let state = actor.observable_state();
                 let _ = state_tx.send(state);

@@ -18,3 +18,43 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
+use async_trait::async_trait;
+use quickwit_actors::Actor;
+use quickwit_actors::AsyncActor;
+use quickwit_actors::Mailbox;
+use quickwit_actors::MessageProcessError;
+use quickwit_metastore::Metastore;
+use quickwit_storage::Storage;
+
+use crate::models::Manifest;
+
+pub struct Uploader {
+    pub storage: Arc<dyn Storage>,
+    pub metastore: Arc<dyn Metastore>,
+    pub publisher_mailbox: Mailbox<Manifest>,
+}
+
+impl Actor for Uploader {
+    type Message = Manifest;
+
+    type ObservableState = ();
+
+    fn observable_state(&self) -> Self::ObservableState {
+        ()
+    }
+}
+
+#[async_trait]
+impl AsyncActor for Uploader {
+    async fn process_message(
+        &mut self,
+        manifest: Manifest,
+        progress: &quickwit_actors::Progress,
+    ) -> Result<(), MessageProcessError> {
+        // TODO stage_stuff
+        // TODO upload_stuff
+        self.publisher_mailbox.send_async(manifest).await?;
+        Ok(())
+    }
+}
