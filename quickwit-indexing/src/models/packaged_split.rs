@@ -1,5 +1,3 @@
-use quickwit_metastore::Checkpoint;
-
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -20,8 +18,14 @@ use quickwit_metastore::Checkpoint;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use tempfile::TempDir;
+
+use crate::models::Manifest;
+use crate::models::SplitLabel;
+
 #[derive(Debug)]
-pub struct Batch {
-    pub docs: Vec<String>,
-    pub checkpoint_update: Checkpoint,
+pub struct PackagedSplit {
+    pub manifest: Manifest,
+    pub split_label: SplitLabel,
+    pub directory: TempDir,
 }

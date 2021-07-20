@@ -20,19 +20,21 @@
 
 use std::sync::Arc;
 
-use anyhow::Context;
 use anyhow::bail;
+use anyhow::Context;
 use quickwit_actors::Actor;
 use quickwit_actors::Mailbox;
 use quickwit_actors::MessageProcessError;
 use quickwit_actors::SyncActor;
 use quickwit_index_config::IndexConfig;
-use tantivy::Document;
+use quickwit_metastore::Checkpoint;
 use tantivy::Index;
 use tantivy::IndexWriter;
 use tempfile::TempDir;
 
-use crate::split::Split;
+use crate::models::Batch;
+use crate::models::IndexedSplit;
+use crate::models::SplitLabel;
 
 struct Scratch {
     index_writer: IndexWriter,
@@ -40,7 +42,10 @@ struct Scratch {
 }
 
 impl Scratch {
-    pub fn create(index_config: &dyn IndexConfig, memory_in_bytes: usize) -> anyhow::Result<Scratch> {
+    pub fn create(
+        index_config: &dyn IndexConfig,
+        memory_in_bytes: usize,
+    ) -> anyhow::Result<Scratch> {
         let tempdir = tempfile::tempdir()?;
         let schema = index_config.schema();
         let index = Index::create_in_dir(tempdir.path(), schema)?;
@@ -65,20 +70,28 @@ pub struct IndexerStatistics {
 
 pub struct Indexer {
     params: IndexerParams,
-    packager_mailbox: Mailbox<Split>,
+    packager_mailbox: Mailbox<IndexedSplit>,
     statistics: IndexerStatistics,
+    split_label: SplitLabel,
+    checkpoint: Checkpoint,
     scratch_opt: Option<Scratch>,
 }
 
 impl Indexer {
-    pub fn new(params: IndexerParams, packager_mailbox: Mailbox<Split>) -> anyhow::Result<Indexer> {
+    pub fn new(
+        params: IndexerParams,
+        split_label: SplitLabel,
+        packager_mailbox: Mailbox<IndexedSplit>,
+    ) -> anyhow::Result<Indexer> {
         let mut indexer = Indexer {
             params,
             packager_mailbox,
             statistics: Default::default(),
             scratch_opt: None,
+            split_label,
+            checkpoint: Checkpoint::default(),
         };
-        indexer.create_scratch();
+        indexer.create_scratch()?;
         Ok(indexer)
     }
 
@@ -91,18 +104,17 @@ impl Indexer {
         Ok(())
     }
 
-    fn scratch(&self) -> anyhow::Result<&Scratch> {
+    fn index_writer(&self) -> anyhow::Result<&IndexWriter> {
         if let Some(scratch) = self.scratch_opt.as_ref() {
-            Ok(scratch)
+            Ok(&scratch.index_writer)
         } else {
             bail!("Missing scratch");
         }
     }
-
 }
 
 impl Actor for Indexer {
-    type Message = String;
+    type Message = Batch;
 
     type ObservableState = IndexerStatistics;
 
@@ -114,26 +126,30 @@ impl Actor for Indexer {
 impl SyncActor for Indexer {
     fn process_message(
         &mut self,
-        doc_json: String,
-        progress: &quickwit_actors::Progress,
+        document_batch: Batch,
+        _progress: &quickwit_actors::Progress,
     ) -> Result<(), MessageProcessError> {
-        let doc = self.params.index_config.doc_from_json(&doc_json)
-            .with_context(|| doc_json)?;
-        let scratch = self.scratch()?;
-        scratch.index_writer.add_document(doc);
+        let index_writer = self.index_writer()?;
+        for doc_json in document_batch.docs {
+            let doc = self
+                .params
+                .index_config
+                .doc_from_json(&doc_json)
+                .with_context(|| doc_json)?;
+            index_writer.add_document(doc);
+        }
+        self.checkpoint.update_checkpoint(document_batch.checkpoint_update);
         Ok(())
     }
 
     fn finalize(&mut self) -> anyhow::Result<()> {
-        let mut scratch = self.scratch_opt.take()
-            .with_context(|| "Missing scratch")?;
+        let mut scratch = self.scratch_opt.take().with_context(|| "Missing scratch")?;
         scratch.index_writer.commit()?;
-        let split = Split {
+        let split = IndexedSplit {
             directory: scratch.tempdir,
+            label: self.split_label.clone()
         };
         self.packager_mailbox.send_blocking(split)?;
         Ok(())
     }
 }
-
-

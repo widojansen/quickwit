@@ -78,9 +78,7 @@ async fn async_actor_loop<A: AsyncActor>(
             Ok(Ok(ActorMessage::Message(message))) => {
                 match actor.process_message(message, &progress).await {
                     Ok(()) => (),
-                    Err(MessageProcessError::OnDemand) => {
-                        return ActorTermination::OnDemand
-                    },
+                    Err(MessageProcessError::OnDemand) => return ActorTermination::OnDemand,
                     Err(MessageProcessError::Error(err)) => {
                         kill_switch.kill();
                         return ActorTermination::ActorError(err);
@@ -90,7 +88,7 @@ async fn async_actor_loop<A: AsyncActor>(
                         return ActorTermination::DownstreamClosed;
                     }
                 }
-            },
+            }
             Ok(Ok(ActorMessage::Observe(oneshot))) => {
                 let state = actor.observable_state();
                 let _ = state_tx.send(state);

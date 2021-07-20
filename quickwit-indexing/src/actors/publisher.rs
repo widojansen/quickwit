@@ -6,7 +6,7 @@ use quickwit_actors::MessageProcessError;
 use quickwit_metastore::Metastore;
 use async_trait::async_trait;
 
-use crate::models::Manifest;
+use crate::models::UploadedSplit;
 
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
@@ -33,7 +33,7 @@ pub struct Publisher {
 }
 
 impl Actor for Publisher {
-    type Message = Manifest;
+    type Message = UploadedSplit;
 
     type ObservableState = ();
 
@@ -46,8 +46,8 @@ impl Actor for Publisher {
 impl AsyncActor for Publisher {
     async fn process_message(
         &mut self,
-        message: Self::Message,
-        progress: &quickwit_actors::Progress,
+        _message: UploadedSplit,
+        _progress: &quickwit_actors::Progress,
     ) -> Result<(), MessageProcessError> {
         todo!();
     }

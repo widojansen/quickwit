@@ -27,16 +27,17 @@ use quickwit_actors::MessageProcessError;
 use quickwit_metastore::Metastore;
 use quickwit_storage::Storage;
 
-use crate::models::Manifest;
+use crate::models::PackagedSplit;
+use crate::models::UploadedSplit;
 
 pub struct Uploader {
     pub storage: Arc<dyn Storage>,
     pub metastore: Arc<dyn Metastore>,
-    pub publisher_mailbox: Mailbox<Manifest>,
+    pub publisher_mailbox: Mailbox<UploadedSplit>,
 }
 
 impl Actor for Uploader {
-    type Message = Manifest;
+    type Message = PackagedSplit;
 
     type ObservableState = ();
 
@@ -49,12 +50,16 @@ impl Actor for Uploader {
 impl AsyncActor for Uploader {
     async fn process_message(
         &mut self,
-        manifest: Manifest,
-        progress: &quickwit_actors::Progress,
+        packaged_split: PackagedSplit,
+        _progress: &quickwit_actors::Progress,
     ) -> Result<(), MessageProcessError> {
         // TODO stage_stuff
         // TODO upload_stuff
-        self.publisher_mailbox.send_async(manifest).await?;
+        let uploaded_split = UploadedSplit {
+            manifest: packaged_split.manifest,
+            split_label: packaged_split.split_label,
+        };
+        self.publisher_mailbox.send_async(uploaded_split).await?;
         Ok(())
     }
 }

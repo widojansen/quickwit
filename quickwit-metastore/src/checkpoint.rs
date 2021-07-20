@@ -1,4 +1,3 @@
-use quickwit_metastore::Checkpoint;
 
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
@@ -20,8 +19,18 @@ use quickwit_metastore::Checkpoint;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#[derive(Debug)]
-pub struct Batch {
-    pub docs: Vec<String>,
-    pub checkpoint_update: Checkpoint,
+use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct Checkpoint {
+    per_partition_position: HashMap<String, Vec<u8>>,
+}
+impl Checkpoint {
+    /// Update the position shipped in the `checkpoint_update`.
+    pub fn update_checkpoint(&mut self, checkpoint_update: Checkpoint) {
+        for (partition_id, partition_position) in checkpoint_update.per_partition_position {
+            self.per_partition_position.insert(partition_id, partition_position);
+        }
+    }
 }

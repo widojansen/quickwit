@@ -20,6 +20,14 @@
 
 mod batch;
 mod manifest;
+mod indexed_split;
+mod packaged_split;
+mod split_label;
+mod uploaded_split;
 
 pub use self::batch::Batch;
 pub use self::manifest::Manifest;
+pub use self::packaged_split::PackagedSplit;
+pub use self::split_label::SplitLabel;
+pub use self::indexed_split::IndexedSplit;
+pub use self::uploaded_split::UploadedSplit;

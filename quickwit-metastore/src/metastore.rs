@@ -30,16 +30,16 @@ use async_trait::async_trait;
 use quickwit_index_config::IndexConfig;
 use serde::{Deserialize, Serialize, de};
 
-use crate::MetastoreResult;
+use crate::{Checkpoint, MetastoreResult};
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
-pub struct Checkpoint {
+
+#[derive(Debug, Clone, Default)]
+pub struct PositionPayload {
     payload: Vec<u8>
 }
 
 
-impl Serialize for Checkpoint {
+impl Serialize for PositionPayload {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
@@ -48,7 +48,7 @@ impl Serialize for Checkpoint {
     }
 }
 
-impl<'de> Deserialize<'de> for Checkpoint {
+impl<'de> Deserialize<'de> for PositionPayload {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de> {
@@ -57,7 +57,7 @@ impl<'de> Deserialize<'de> for Checkpoint {
             .map_err(|_decode_err| {
               serde::de::Error::invalid_value(de::Unexpected::Str("not valid base64"), &"base64")
             })?;
-        Ok(Checkpoint { payload })
+        Ok(PositionPayload { payload })
     }
 }
 
@@ -71,7 +71,7 @@ pub struct IndexMetadata {
     pub index_uri: String,
     /// The config used for this index.
     pub index_config: Box<dyn IndexConfig>,
-
+    /// Last indexed checkpoint.
     pub checkpoint: Checkpoint,
 }
 

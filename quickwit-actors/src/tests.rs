@@ -1,6 +1,6 @@
 use crate::actor::{Actor, KillSwitch, Progress};
 use crate::actor_handle::Mailbox;
-use crate::{AsyncActor, Observation, SyncActor};
+use crate::{AsyncActor, MessageProcessError, Observation, SyncActor};
 use async_trait::async_trait;
 use std::collections::HashSet;
 
@@ -32,9 +32,9 @@ impl SyncActor for PingReceiverSyncActor {
         &mut self,
         _message: Self::Message,
         _progress: &Progress,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<(), MessageProcessError> {
         self.ping_count += 1;
-        Ok(true)
+        Ok(())
     }
 }
 
@@ -78,7 +78,7 @@ impl AsyncActor for PingerAsyncSenderActor {
         &mut self,
         message: SenderMessage,
         _progress: &Progress,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<(), MessageProcessError> {
         match message {
             SenderMessage::AddPeer(peer) => {
                 self.peers.insert(peer);
@@ -90,7 +90,7 @@ impl AsyncActor for PingerAsyncSenderActor {
                 }
             }
         }
-        Ok(true)
+        Ok(())
     }
 }
 
@@ -176,7 +176,7 @@ impl AsyncActor for BuggyActor {
         &mut self,
         message: BuggyMessage,
         _progress: &Progress,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<(), MessageProcessError> {
         match message {
             BuggyMessage::Block => {
                 loop {
@@ -186,7 +186,7 @@ impl AsyncActor for BuggyActor {
             }
             BuggyMessage::DoNothing => {}
         }
-        Ok(true)
+        Ok(())
     }
 }
 

@@ -25,8 +25,9 @@ pub trait SyncActor: Actor + Sized {
     ) -> Result<(), MessageProcessError>;
 
     /// Function called if there are no more messages available.
-    fn finalize(&mut self) -> anyhow::Result<()> { Ok(()) }
-
+    fn finalize(&mut self) -> anyhow::Result<()> {
+        Ok(())
+    }
 
     #[doc(hidden)]
     fn spawn(
@@ -81,22 +82,18 @@ fn sync_actor_loop<A: SyncActor>(
             return ActorTermination::KillSwitch;
         }
         match sync_msg_res {
-            Ok(ActorMessage::Message(message)) => {
-                match actor.process_message(message, &progress) {
-                    Ok(()) => (),
-                    Err(MessageProcessError::OnDemand) => {
-                        return ActorTermination::OnDemand
-                    },
-                    Err(MessageProcessError::Error(err)) => {
-                        kill_switch.kill();
-                        return ActorTermination::ActorError(err);
-                    }
-                    Err(MessageProcessError::DownstreamClosed) => {
-                        kill_switch.kill();
-                        return ActorTermination::DownstreamClosed;
-                    }
+            Ok(ActorMessage::Message(message)) => match actor.process_message(message, &progress) {
+                Ok(()) => (),
+                Err(MessageProcessError::OnDemand) => return ActorTermination::OnDemand,
+                Err(MessageProcessError::Error(err)) => {
+                    kill_switch.kill();
+                    return ActorTermination::ActorError(err);
                 }
-            }
+                Err(MessageProcessError::DownstreamClosed) => {
+                    kill_switch.kill();
+                    return ActorTermination::DownstreamClosed;
+                }
+            },
             Ok(ActorMessage::Observe(oneshot)) => {
                 let state = actor.observable_state();
                 // We voluntarily ignore the error here. (An error only occurs if the

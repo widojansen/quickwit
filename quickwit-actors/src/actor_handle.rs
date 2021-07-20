@@ -20,9 +20,8 @@ impl<Message> Clone for Mailbox<Message> {
         Mailbox {
             sender: self.sender.clone(),
             id: self.id.clone(),
-            actor_name: self.actor_name.clone()
+            actor_name: self.actor_name.clone(),
         }
-
     }
 }
 

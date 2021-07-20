@@ -1,11 +1,10 @@
 use std::any::type_name;
 use std::fmt;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use thiserror::Error;
 
 use crate::SendError;
-
 
 #[derive(Error, Debug)]
 pub enum MessageProcessError {
@@ -14,7 +13,7 @@ pub enum MessageProcessError {
     #[error("Downstream actor closed connection")]
     DownstreamClosed,
     #[error("Failure")]
-    Error(#[from] anyhow::Error)
+    Error(#[from] anyhow::Error),
 }
 
 impl From<SendError> for MessageProcessError {
@@ -78,36 +77,40 @@ impl Progress {
     }
 }
 
-
 #[derive(Clone)]
 pub struct KillSwitch {
-    step_id: usize,
-    lowest_step_alive: Arc<AtomicUsize>
+    alive: Arc<AtomicBool>,
 }
 
 impl Default for KillSwitch {
     fn default() -> Self {
         KillSwitch {
-            step_id: 0,
-            lowest_step_alive: Arc::new(AtomicUsize::new(0))
+            alive: Arc::new(AtomicBool::new(true)),
         }
     }
 }
 
 impl KillSwitch {
     pub fn kill(&self) {
-        self.lowest_step_alive.fetch_max(self.step_id + 1, Ordering::AcqRel);
+        self.alive.store(false, Ordering::Relaxed);
     }
 
     pub fn is_alive(&self) -> bool {
-        let lowest_step_alive = self.lowest_step_alive.load(Ordering::Relaxed);
-        lowest_step_alive < self.step_id
+        self.alive.load(Ordering::Relaxed)
     }
+}
 
-    pub fn add_step(&self) -> KillSwitch {
-        KillSwitch {
-            step_id: self.step_id + 1,
-            lowest_step_alive: self.lowest_step_alive.clone(),
-        }
+#[cfg(test)]
+mod tests {
+    use super::KillSwitch;
+
+    #[test]
+    fn test_kill_switch() {
+        let kill_switch = KillSwitch::default();
+        assert_eq!(kill_switch.is_alive(), true);
+        kill_switch.kill();
+        assert_eq!(kill_switch.is_alive(), false);
+        kill_switch.kill();
+        assert_eq!(kill_switch.is_alive(), false);
     }
 }

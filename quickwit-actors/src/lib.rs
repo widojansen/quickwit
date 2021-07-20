@@ -36,7 +36,7 @@ mod sync_actor;
 #[cfg(test)]
 mod tests;
 
-pub use actor::{Actor, KillSwitch, Progress, MessageProcessError};
+pub use actor::{Actor, KillSwitch, MessageProcessError, Progress};
 pub(crate) use actor_handle::ActorMessage;
 pub use actor_handle::{mock_mailbox, ActorHandle, DebugInbox, Mailbox};
 pub use async_actor::AsyncActor;
@@ -63,5 +63,4 @@ impl Display for SendError {
     }
 }
 
-impl Error for SendError {
-}
+impl Error for SendError {}

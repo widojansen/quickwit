@@ -24,8 +24,8 @@ mod publisher;
 mod uploader;
 mod packager;
 
-pub(crate) use indexer::{Indexer, IndexerParams, IndexerStatistics};
-pub(crate) use source::{Source, build_source};
+pub(crate) use indexer::{Indexer, IndexerParams};
+pub(crate) use source::build_source;
 pub(crate) use publisher::Publisher;
 pub(crate) use uploader::Uploader;
 pub(crate) use packager::Packager;

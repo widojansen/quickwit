@@ -18,19 +18,28 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::path::Path;
+
 use quickwit_actors::Actor;
 use quickwit_actors::Mailbox;
 use quickwit_actors::SyncActor;
 use crate::models::Manifest;
+use crate::models::PackagedSplit;
+use crate::models::IndexedSplit;
 
-use crate::split::Split;
 
 pub struct Packager {
-    pub uploader_mailbox: Mailbox<Manifest>,
+    pub uploader_mailbox: Mailbox<PackagedSplit>,
+}
+
+impl Packager {
+    fn package(&self, _index_path: &Path) -> anyhow::Result<Manifest> {
+        Ok(Manifest::default())
+    }
 }
 
 impl Actor for Packager {
-    type Message = Split;
+    type Message = IndexedSplit;
 
     type ObservableState = ();
 
@@ -42,9 +51,15 @@ impl Actor for Packager {
 impl SyncActor for Packager {
     fn process_message(
         &mut self,
-        message: Self::Message,
-        progress: &quickwit_actors::Progress,
+        indexed_split: IndexedSplit,
+        _progress: &quickwit_actors::Progress,
     ) -> Result<(), quickwit_actors::MessageProcessError> {
+        let manifest = self.package(indexed_split.directory.path())?;
+        self.uploader_mailbox.send_blocking(PackagedSplit {
+            manifest,
+            split_label: indexed_split.label,
+            directory: indexed_split.directory,
+        })?;
         Ok(())
     }
 }

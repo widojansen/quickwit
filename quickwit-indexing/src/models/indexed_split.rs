@@ -1,5 +1,3 @@
-use tempfile::TempDir;
-
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -20,8 +18,11 @@ use tempfile::TempDir;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use tempfile::TempDir;
+use crate::models::SplitLabel;
 
 #[derive(Debug)]
-pub struct Split {
-    pub directory: tempfile::TempDir,
+pub struct IndexedSplit {
+    pub label: SplitLabel,
+    pub directory: TempDir,
 }
