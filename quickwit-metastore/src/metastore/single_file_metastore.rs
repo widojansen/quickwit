@@ -389,7 +389,7 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
 
-    use crate::{IndexMetadata, MetastoreError};
+    use crate::{Checkpoint, IndexMetadata, MetastoreError};
     use crate::{Metastore, SingleFileMetastore, SplitMetadata, SplitState};
     use quickwit_index_config::AllFlattenIndexConfig;
     use quickwit_storage::{MockStorage, StorageErrorKind};
@@ -409,6 +409,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes/my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -436,6 +437,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes//my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -472,6 +474,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes//my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -522,6 +525,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes//my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -571,6 +575,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes/my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -714,6 +719,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes/my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -860,6 +866,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes/my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // create index
@@ -1424,6 +1431,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes/my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -1529,6 +1537,7 @@ mod tests {
                 index_id: index_id.to_string(),
                 index_uri: "ram://indexes/my-index".to_string(),
                 index_config: Box::new(AllFlattenIndexConfig::default()),
+                checkpoint: Checkpoint::default(),
             };
 
             // Create index
@@ -1645,6 +1654,7 @@ mod tests {
             index_id: index_id.to_string(),
             index_uri: "ram://my-indexes/my-index".to_string(),
             index_config: Box::new(AllFlattenIndexConfig::default()),
+            checkpoint: Checkpoint::default(),
         };
 
         // create index

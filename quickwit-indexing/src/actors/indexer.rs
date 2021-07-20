@@ -138,7 +138,8 @@ impl SyncActor for Indexer {
                 .with_context(|| doc_json)?;
             index_writer.add_document(doc);
         }
-        self.checkpoint.update_checkpoint(document_batch.checkpoint_update);
+        self.checkpoint
+            .update_checkpoint(document_batch.checkpoint_update);
         Ok(())
     }
 
@@ -147,7 +148,7 @@ impl SyncActor for Indexer {
         scratch.index_writer.commit()?;
         let split = IndexedSplit {
             directory: scratch.tempdir,
-            label: self.split_label.clone()
+            label: self.split_label.clone(),
         };
         self.packager_mailbox.send_blocking(split)?;
         Ok(())

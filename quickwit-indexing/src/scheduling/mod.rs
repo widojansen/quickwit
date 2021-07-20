@@ -1,13 +1,3 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
-use quickwit_actors::Actor;
-use quickwit_actors::AsyncActor;
-use quickwit_actors::MessageProcessError;
-use quickwit_metastore::Metastore;
-
-use crate::models::UploadedSplit;
-
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -28,27 +18,11 @@ use crate::models::UploadedSplit;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub struct Publisher {
-    pub metastore: Arc<dyn Metastore>,
-}
+mod scheduler;
+mod scheduler_config;
+mod source_config;
+mod unique_queue;
 
-impl Actor for Publisher {
-    type Message = UploadedSplit;
-
-    type ObservableState = ();
-
-    fn observable_state(&self) -> Self::ObservableState {
-        ()
-    }
-}
-
-#[async_trait]
-impl AsyncActor for Publisher {
-    async fn process_message(
-        &mut self,
-        _message: UploadedSplit,
-        _progress: &quickwit_actors::Progress,
-    ) -> Result<(), MessageProcessError> {
-        todo!();
-    }
-}
+pub use self::scheduler::start_scheduler;
+pub use self::scheduler_config::SchedulerConfig;
+pub use self::source_config::SourceConfig;

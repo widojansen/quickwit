@@ -19,12 +19,9 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #[allow(missing_docs)]
-
 mod actors;
-mod models;
 mod campaign;
+mod models;
+mod scheduling;
 
-pub use campaign::{Campaign, run_campaign};
-
-pub type SourceId = String;
-pub type IndexId = String;
+pub use campaign::{run_campaign, Campaign};

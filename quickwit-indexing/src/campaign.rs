@@ -26,10 +26,10 @@ use quickwit_actors::SyncActor;
 use quickwit_metastore::Metastore;
 use quickwit_storage::Storage;
 
+use crate::actors::build_source;
 use crate::actors::Indexer;
 use crate::actors::IndexerParams;
 use crate::actors::Packager;
-use crate::actors::build_source;
 use crate::actors::Publisher;
 use crate::actors::Uploader;
 use crate::models::SplitLabel;
@@ -43,13 +43,15 @@ pub struct Campaign {
 }
 
 pub async fn run_campaign(campaign: Campaign) -> anyhow::Result<()> {
-
-    let index_metadata = campaign.metastore.index_metadata(&campaign.split_label.index).await?;
+    let index_metadata = campaign
+        .metastore
+        .index_metadata(&campaign.split_label.index)
+        .await?;
 
     let campaign_kill_switch = KillSwitch::default();
 
     let publisher = Publisher {
-        metastore: campaign.metastore.clone()
+        metastore: campaign.metastore.clone(),
     };
     let (publisher_mailbox, _publisher_handler) = publisher.spawn(3, campaign_kill_switch.clone());
 
@@ -60,22 +62,27 @@ pub async fn run_campaign(campaign: Campaign) -> anyhow::Result<()> {
     };
     let (uploader_mailbox, _uploader_handler) = uploader.spawn(1, campaign_kill_switch.clone());
 
-
-    let packager = Packager {
-        uploader_mailbox,
-    };
+    let packager = Packager { uploader_mailbox };
     let (packager_mailbox, _packager_handler) = packager.spawn(1, campaign_kill_switch.clone());
-
 
     let indexer_params = IndexerParams {
         index: campaign.split_label.index.clone(),
         index_config: Arc::from(index_metadata.index_config),
-        mem_budget_in_bytes: MEM_BUDGET_IN_BYTES
+        mem_budget_in_bytes: MEM_BUDGET_IN_BYTES,
     };
-    let writer: Indexer = Indexer::new(indexer_params, campaign.split_label.clone(), packager_mailbox)?;
+    let writer: Indexer = Indexer::new(
+        indexer_params,
+        campaign.split_label.clone(),
+        packager_mailbox,
+    )?;
     let (writer_mailbox, _writer_handle) = writer.spawn(100, campaign_kill_switch.clone());
 
-    let source = build_source(&campaign.split_label.source, writer_mailbox, &index_metadata.checkpoint).await?;
+    let source = build_source(
+        &campaign.split_label.source,
+        writer_mailbox,
+        &index_metadata.checkpoint,
+    )
+    .await?;
     source.spawn()?;
 
     Ok(())

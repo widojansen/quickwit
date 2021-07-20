@@ -103,7 +103,7 @@ mod tests {
     use crate::indexing::split::Split;
     use crate::indexing::{IndexDataParams, IndexingStatistics};
     use quickwit_index_config::AllFlattenIndexConfig;
-    use quickwit_metastore::{IndexMetadata, MockMetastore};
+    use quickwit_metastore::{Checkpoint, IndexMetadata, MockMetastore};
     use quickwit_storage::StorageUriResolver;
     use std::sync::Arc;
     use tokio::sync::mpsc::channel;
@@ -132,6 +132,7 @@ mod tests {
                     index_id: index_id.to_string(),
                     index_uri: index_uri.to_string(),
                     index_config: Box::new(AllFlattenIndexConfig::new()),
+                    checkpoint: Checkpoint::default(),
                 })
             });
         let metastore = Arc::new(mock_metastore);

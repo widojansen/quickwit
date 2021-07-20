@@ -19,14 +19,13 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 mod indexer;
-mod source;
-mod publisher;
-mod uploader;
 mod packager;
+mod publisher;
+mod source;
+mod uploader;
 
 pub(crate) use indexer::{Indexer, IndexerParams};
-pub(crate) use source::build_source;
-pub(crate) use publisher::Publisher;
-pub(crate) use uploader::Uploader;
 pub(crate) use packager::Packager;
-
+pub(crate) use publisher::Publisher;
+pub(crate) use source::build_source;
+pub(crate) use uploader::Uploader;

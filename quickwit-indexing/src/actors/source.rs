@@ -3,8 +3,8 @@ use std::sync::Arc;
 use quickwit_actors::Mailbox;
 use quickwit_metastore::Checkpoint;
 
-use crate::SourceId;
 use crate::models::Batch;
+use crate::models::SourceId;
 
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
@@ -33,6 +33,7 @@ pub trait Source {
 pub(crate) async fn build_source(
     _source_id: &SourceId,
     _writer_mailbox: Mailbox<Batch>,
-    _checkpoint: &Checkpoint) -> anyhow::Result<Arc<dyn Source>> {
+    _checkpoint: &Checkpoint,
+) -> anyhow::Result<Arc<dyn Source>> {
     todo!();
 }

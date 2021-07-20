@@ -21,7 +21,6 @@
 use crate::models::Manifest;
 use crate::models::SplitLabel;
 
-
 #[derive(Debug)]
 pub struct UploadedSplit {
     pub manifest: Manifest,

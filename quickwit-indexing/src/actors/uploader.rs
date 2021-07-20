@@ -18,7 +18,6 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
 use async_trait::async_trait;
 use quickwit_actors::Actor;
 use quickwit_actors::AsyncActor;
@@ -26,6 +25,7 @@ use quickwit_actors::Mailbox;
 use quickwit_actors::MessageProcessError;
 use quickwit_metastore::Metastore;
 use quickwit_storage::Storage;
+use std::sync::Arc;
 
 use crate::models::PackagedSplit;
 use crate::models::UploadedSplit;

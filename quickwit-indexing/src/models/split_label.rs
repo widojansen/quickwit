@@ -1,7 +1,6 @@
 use quickwit_metastore::Checkpoint;
 
-use crate::IndexId;
-use crate::SourceId;
+use crate::models::{IndexId, SourceId};
 
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
@@ -22,7 +21,6 @@ use crate::SourceId;
 //
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 
 #[derive(Debug, Clone)]
 pub struct SplitLabel {

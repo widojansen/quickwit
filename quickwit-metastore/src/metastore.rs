@@ -28,35 +28,34 @@ use std::ops::Range;
 
 use async_trait::async_trait;
 use quickwit_index_config::IndexConfig;
-use serde::{Deserialize, Serialize, de};
+use serde::{de, Deserialize, Serialize};
 
 use crate::{Checkpoint, MetastoreResult};
 
-
 #[derive(Debug, Clone, Default)]
 pub struct PositionPayload {
-    payload: Vec<u8>
+    payload: Vec<u8>,
 }
-
 
 impl Serialize for PositionPayload {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
-            let payload_base64 = base64::encode(&self.payload[..]);
-            serializer.serialize_str(&payload_base64)
+        S: serde::Serializer,
+    {
+        let payload_base64 = base64::encode(&self.payload[..]);
+        serializer.serialize_str(&payload_base64)
     }
 }
 
 impl<'de> Deserialize<'de> for PositionPayload {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de> {
+        D: serde::Deserializer<'de>,
+    {
         let payload_base64 = String::deserialize(deserializer)?;
-        let payload = base64::decode(payload_base64)
-            .map_err(|_decode_err| {
-              serde::de::Error::invalid_value(de::Unexpected::Str("not valid base64"), &"base64")
-            })?;
+        let payload = base64::decode(payload_base64).map_err(|_decode_err| {
+            serde::de::Error::invalid_value(de::Unexpected::Str("not valid base64"), &"base64")
+        })?;
         Ok(PositionPayload { payload })
     }
 }

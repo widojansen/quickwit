@@ -26,10 +26,10 @@
 - single file metastore
 etc.
 */
+mod checkpoint;
 mod error;
 mod metastore;
 mod metastore_resolver;
-mod checkpoint;
 
 pub use checkpoint::Checkpoint;
 pub use error::{MetastoreError, MetastoreResolverError, MetastoreResult};

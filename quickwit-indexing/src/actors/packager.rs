@@ -20,13 +20,12 @@
 
 use std::path::Path;
 
+use crate::models::IndexedSplit;
+use crate::models::Manifest;
+use crate::models::PackagedSplit;
 use quickwit_actors::Actor;
 use quickwit_actors::Mailbox;
 use quickwit_actors::SyncActor;
-use crate::models::Manifest;
-use crate::models::PackagedSplit;
-use crate::models::IndexedSplit;
-
 
 pub struct Packager {
     pub uploader_mailbox: Mailbox<PackagedSplit>,
