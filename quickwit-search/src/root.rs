@@ -203,14 +203,16 @@ pub async fn root_search(
 
 #[cfg(test)]
 mod tests {
+    use std::net::{IpAddr, SocketAddr};
+
     use super::*;
 
     use serde_json::{json, Value};
 
     use quickwit_core::TestSandbox;
     use quickwit_index_config::WikipediaIndexConfig;
+    use crate::MockSearchService;
 
-    use crate::mockable_client::MockSearchService;
 
     #[tokio::test]
     async fn test_root_search_single_node_single_split() -> anyhow::Result<()> {
@@ -240,16 +242,15 @@ mod tests {
 
         let mut mock_search_service = MockSearchService::new();
         mock_search_service.expect_leaf_search().returning(
-            |_leaf_tonic_req: tonic::Request<quickwit_proto::LeafSearchRequest>| {
-                Ok(tonic::Response::new(quickwit_proto::LeafSearchResult {
+            |_leaf_tonic_req: quickwit_proto::LeafSearchRequest| {
+                Ok(quickwit_proto::LeafSearchResult {
                     partial_hits: Vec::new(),
                     num_hits: 99,
-                }))
+                })
             },
         );
 
-        let client_pool =
-            Arc::new(SearchClientPool::from_mocks(vec![mock_search_service.into()]).await?);
+            Arc::new(SearchClientPool::from_mocks(vec![Arc::new(mock_search_service)]).await?);
 
         let search_result = root_search(&search_request, &*metastore, &client_pool).await?;
         println!("search_result={:?}", search_result);

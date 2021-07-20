@@ -32,6 +32,7 @@ use tokio_stream::wrappers::WatchStream;
 use tokio_stream::StreamExt;
 use tracing::*;
 use uuid::Uuid;
+use crate::SearchService;
 
 use quickwit_cluster::cluster::{Cluster, Member, MockCluster};
 use crate::client::create_search_service_client;
@@ -51,22 +52,25 @@ pub struct SearchClientPool {
 
 impl SearchClientPool {
     #[cfg(test)]
-    pub async fn from_mocks(mock_services: Vec<SearchServiceClient>) -> anyhow::Result<Self> {
+    pub async fn from_mocks(mock_services: Vec<Arc<dyn SearchService>>) -> anyhow::Result<Self> {
+
+
         let mut mock_members = Vec::new();
         let mut mock_clients = HashMap::new();
-        for (mock_ord, mock_client) in mock_services.into_iter().enumerate() {
+        for (mock_ord, mock_service) in mock_services.into_iter().enumerate() {
             let host_key = Uuid::new_v4();
             let listen_addr = SocketAddr::new(
                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
                 10000 + mock_ord as u16 * 10,
             );
-            let is_self = if mock_ord == 0 { true } else { false };
+            let is_self = mock_ord == 0;
 
             let mock_member = Member {
                 host_key,
                 listen_addr,
                 is_self,
             };
+            let mock_client= crate::SearchServiceClient::from_service(mock_service, listen_addr);
             mock_members.push(mock_member);
             mock_clients.insert(listen_addr, mock_client);
         }
