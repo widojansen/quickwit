@@ -34,8 +34,7 @@ use tracing::*;
 use uuid::Uuid;
 
 use quickwit_cluster::cluster::{Cluster, Member, MockCluster};
-
-use crate::client::{create_search_service_client, WrappedSearchServiceClient};
+use crate::client::create_search_service_client;
 use crate::client_pool::{ClientPool, Job};
 use crate::rendezvous_hasher::{sort_by_rendez_vous_hash, Node};
 use crate::swim_addr_to_grpc_addr;
@@ -47,7 +46,7 @@ pub struct SearchClientPool {
     /// Search clients.
     /// A hash map with gRPC's SocketAddr as the key and SearchServiceClient as the value.
     /// It is not the cluster listen address.
-    pub clients: Arc<RwLock<HashMap<SocketAddr, WrappedSearchServiceClient>>>,
+    pub clients: Arc<RwLock<HashMap<SocketAddr, SearchServiceClient>>>,
 }
 
 impl SearchClientPool {
@@ -69,13 +68,7 @@ impl SearchClientPool {
                 is_self,
             };
             mock_members.push(mock_member);
-
-            let wrapped_client = WrappedSearchServiceClient {
-                client: mock_client.clone(),
-                grpc_addr: listen_addr,
-            };
-
-            mock_clients.insert(listen_addr, wrapped_client);
+            mock_clients.insert(listen_addr, mock_client);
         }
 
         let (_members_sender, members_receiver) = watch::channel(Vec::new());
@@ -175,12 +168,12 @@ impl ClientPool for SearchClientPool {
     async fn assign_jobs(
         &self,
         mut jobs: Vec<Job>,
-    ) -> anyhow::Result<Vec<(WrappedSearchServiceClient, Vec<Job>)>> {
+    ) -> anyhow::Result<Vec<(SearchServiceClient, Vec<Job>)>> {
         let mut splits_groups: HashMap<SocketAddr, Vec<Job>> = HashMap::new();
 
         // Distribute using rendez-vous hashing
         let mut nodes: Vec<Node> = Vec::new();
-        let mut socket_to_client: HashMap<SocketAddr, WrappedSearchServiceClient> =
+        let mut socket_to_client: HashMap<SocketAddr, SearchServiceClient> =
             Default::default();
 
         {

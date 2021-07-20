@@ -30,7 +30,6 @@ mod error;
 mod fetch_docs;
 mod filters;
 mod leaf;
-mod mockable_client;
 mod rendezvous_hasher;
 mod root;
 mod search_result_json;
@@ -58,9 +57,7 @@ use crate::leaf::leaf_search;
 use crate::root::root_search;
 pub use crate::search_result_json::SearchResultJson;
 pub use crate::service::{MockSearchService, SearchService, SearchServiceImpl};
-
-/// Mockable search service client.
-pub type SearchServiceClient = mockable_client::SearchServiceForTest;
+pub use crate::client::SearchServiceClient;
 
 /// Compute the SWIM port from the HTTP port.
 /// Add 1 to the HTTP port to get the SWIM port.

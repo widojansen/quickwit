@@ -19,22 +19,58 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+use std::fmt;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use http::Uri;
+use tonic::Request;
+use tonic::transport::Channel;
 use tonic::transport::Endpoint;
 
-use crate::SearchServiceClient;
+use crate::SearchError;
+use crate::SearchService;
+use crate::error::parse_grpc_error;
 
-#[derive(Debug, Clone)]
-pub struct WrappedSearchServiceClient {
-    pub client: SearchServiceClient,
-    pub grpc_addr: SocketAddr,
+#[derive(Clone)]
+
+enum Impl {
+    Local(Arc<dyn SearchService>),
+    Grpc(quickwit_proto::search_service_client::SearchServiceClient<Channel>)
 }
 
-impl WrappedSearchServiceClient {
-    fn new(client: SearchServiceClient, grpc_addr: SocketAddr) -> Self {
-        Self { client, grpc_addr }
+#[derive(Clone)]
+pub struct SearchServiceClient {
+    implementation: Impl,
+    grpc_addr: SocketAddr,
+}
+
+impl fmt::Debug for SearchServiceClient {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.implementation {
+            Impl::Local(_service) => {
+                write!(f, "Local({:?})", self.grpc_addr)
+            },
+            Impl::Grpc(grpc_client) => {
+                write!(f, "Grpc({:?})", self.grpc_addr)
+            },
+        }
+
+    }
+}
+impl SearchServiceClient {
+    pub fn from_grpc_client(client: quickwit_proto::search_service_client::SearchServiceClient<Channel>, grpc_addr: SocketAddr) -> Self {
+        SearchServiceClient {
+            implementation: Impl::Grpc(client),
+            grpc_addr,
+        }
+    }
+
+    pub fn from_service(service: Arc<dyn SearchService>, grpc_addr: SocketAddr) -> Self {
+        SearchServiceClient {
+            implementation: Impl::Local(service),
+            grpc_addr,
+        }
     }
 
     /// Return the grpc_addr the underlying client connects to.
@@ -42,17 +78,45 @@ impl WrappedSearchServiceClient {
         self.grpc_addr
     }
 
-    /// Returns the unterlying client.
-    pub fn client(&mut self) -> &mut SearchServiceClient {
-        &mut self.client
+    pub async fn root_search(
+        &mut self,
+        request: quickwit_proto::SearchRequest,
+    ) -> Result<quickwit_proto::SearchResult, SearchError> {
+        match &mut self.implementation {
+            Impl::Grpc(grpc_client) => {
+                let tonic_request  = Request::new(request);
+                let tonic_result = grpc_client.root_search(tonic_request)
+                    .await
+                    .map_err(|tonic_error| {
+                        parse_grpc_error(&tonic_error)
+                    })?;
+                Ok(tonic_result.into_inner())
+           },
+            Impl::Local(service) => service.root_search(request).await,
+        }
     }
+
+    pub async fn leaf_search(
+        &mut self,
+        request: quickwit_proto::LeafSearchRequest,
+    ) -> Result<quickwit_proto::LeafSearchResult, SearchError> {
+        todo!()
+    }
+
+    pub async fn fetch_docs(
+        &mut self,
+        request: quickwit_proto::FetchDocsRequest,
+    ) -> Result<quickwit_proto::FetchDocsResult, SearchError> {
+        todo!()
+    }
+
 }
 
 /// Create a SearchServiceClient with SocketAddr as an argument.
 /// It will try to reconnect to the node automatically.
 pub async fn create_search_service_client(
     grpc_addr: SocketAddr,
-) -> anyhow::Result<WrappedSearchServiceClient> {
+) -> anyhow::Result<SearchServiceClient> {
     let uri = Uri::builder()
         .scheme("http")
         .authority(grpc_addr.to_string().as_str())
@@ -62,6 +126,6 @@ pub async fn create_search_service_client(
     // Create a channel with connect_lazy to automatically reconnect to the node.
     let channel = Endpoint::from(uri).connect_lazy()?;
 
-    let client = WrappedSearchServiceClient::new(SearchServiceClient::new(channel), grpc_addr);
+    let client = SearchServiceClient::from_grpc_client(quickwit_proto::search_service_client::SearchServiceClient::new(channel), grpc_addr);
     Ok(client)
 }
