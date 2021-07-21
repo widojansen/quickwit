@@ -29,7 +29,7 @@ use tempfile::TempDir;
 use tokio::sync::mpsc::channel;
 use tracing::warn;
 
-use crate::index::garbage_collect;
+use crate::index::delete_garbage_files;
 use crate::indexing::split_finalizer::finalize_split;
 use crate::indexing::{document_indexer::index_documents, split::Split};
 use crate::DocumentSource;
@@ -97,7 +97,7 @@ pub async fn index_data(
 }
 
 /// Clears the index by applying the following actions:
-/// - mark all split as deleted.
+/// - mark all splits as deleted.
 /// - delete the files of all splits marked as deleted using garbage collection.
 /// - delete the splits from the metastore.
 ///
@@ -120,8 +120,8 @@ async fn reset_index(
         .mark_splits_as_deleted(index_id, split_ids.clone())
         .await?;
 
-    let garbage_collection_result = garbage_collect(metastore, index_id, storage_resolver).await;
-    if garbage_collection_result.is_err() {
+    let garbage_removal_result = delete_garbage_files(metastore, index_id, storage_resolver).await;
+    if garbage_removal_result.is_err() {
         warn!(metastore_uri = %metastore.uri(), "All split files could not be removed during garbage collection.");
     }
 

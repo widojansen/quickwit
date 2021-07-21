@@ -37,6 +37,7 @@ use quickwit_search::single_node_search;
 use quickwit_search::SearchResultJson;
 use quickwit_storage::StorageUriResolver;
 use quickwit_telemetry::payload::TelemetryEvent;
+use std::collections::VecDeque;
 use std::env;
 use std::io;
 use std::io::Stdout;
@@ -44,6 +45,7 @@ use std::io::{stdout, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use std::usize;
 use tempfile::TempDir;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
@@ -54,7 +56,13 @@ use tokio::time::timeout;
 use tokio::try_join;
 use tracing::debug;
 
-use quickwit_core::{create_index, delete_index, index_data, IndexDataParams, IndexingStatistics};
+use quickwit_core::{
+    create_index, delete_index, garbage_collect_index, index_data, IndexDataParams,
+    IndexingStatistics,
+};
+
+/// Throughput calculation window size.
+const THROUGHPUT_WINDOW_SIZE: usize = 5;
 
 #[derive(Debug)]
 pub struct CreateIndexArgs {
@@ -113,6 +121,12 @@ pub struct SearchIndexArgs {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DeleteIndexArgs {
+    pub index_uri: String,
+    pub dry_run: bool,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct GarbageCollectIndexArgs {
     pub index_uri: String,
     pub dry_run: bool,
 }
@@ -285,13 +299,52 @@ pub async fn delete_index_cli(args: DeleteIndexArgs) -> anyhow::Result<()> {
             "The following files will be removed along with the index at `{}`",
             args.index_uri
         );
-        for file in affected_files {
-            println!(" - {}", file.display());
+        for file_entry in affected_files {
+            println!(" - {}", file_entry.file_name);
         }
         return Ok(());
     }
 
     println!("Index successfully deleted at `{}`", args.index_uri);
+    Ok(())
+}
+
+pub async fn garbage_collect_index_cli(args: GarbageCollectIndexArgs) -> anyhow::Result<()> {
+    debug!(
+        index_uri = %args.index_uri,
+        dry_run = args.dry_run,
+        "garbage-collect-index"
+    );
+    quickwit_telemetry::send_telemetry_event(TelemetryEvent::GarbageCollect).await;
+
+    let (metastore_uri, index_id) =
+        extract_metastore_uri_and_index_id_from_index_uri(&args.index_uri)?;
+    let deleted_files = garbage_collect_index(metastore_uri, index_id, args.dry_run).await?;
+    if deleted_files.is_empty() {
+        println!("No dangling files to garbage collect.");
+        return Ok(());
+    }
+
+    if args.dry_run {
+        println!("The following files will be garbage collected.");
+        for file_entry in deleted_files {
+            println!(" - {}", file_entry.file_name);
+        }
+        return Ok(());
+    }
+
+    let deleted_bytes: u64 = deleted_files
+        .iter()
+        .map(|entry| entry.file_size_in_bytes)
+        .sum();
+    println!(
+        "{}MB of storage garbage collected.",
+        deleted_bytes / 1_000_000
+    );
+    println!(
+        "Index successfully garbage collected at `{}`",
+        args.index_uri
+    );
     Ok(())
 }
 
@@ -306,6 +359,7 @@ pub async fn start_statistics_reporting(
         let mut stdout_handle = stdout();
         let start_time = Instant::now();
         let is_tty = atty::is(atty::Stream::Stdout);
+        let mut throughput_calculator = ThroughputCalculator::new(start_time);
         loop {
             // Try to receive with a timeout of 1 second.
             // 1 second is also the frequency at which we update statistic in the console
@@ -315,7 +369,12 @@ pub async fn start_statistics_reporting(
 
             // Let's not display live statistics to allow screen to scroll.
             if statistics.num_docs.get() > 0 {
-                display_statistics(&mut stdout_handle, start_time, statistics.clone(), is_tty)?;
+                display_statistics(
+                    &mut stdout_handle,
+                    &mut throughput_calculator,
+                    statistics.clone(),
+                    is_tty,
+                )?;
             }
 
             if is_done {
@@ -330,7 +389,12 @@ pub async fn start_statistics_reporting(
         }
 
         if input_path_opt.is_none() {
-            display_statistics(&mut stdout_handle, start_time, statistics.clone(), is_tty)?;
+            display_statistics(
+                &mut stdout_handle,
+                &mut throughput_calculator,
+                statistics.clone(),
+                is_tty,
+            )?;
         }
         //display end of task report
         println!();
@@ -357,13 +421,18 @@ pub async fn start_statistics_reporting(
 
 fn display_statistics(
     stdout_handle: &mut Stdout,
-    start_time: Instant,
+    throughput_calculator: &mut ThroughputCalculator,
     statistics: Arc<IndexingStatistics>,
     is_tty: bool,
 ) -> anyhow::Result<()> {
-    let elapsed_secs = start_time.elapsed().as_secs();
-    let throughput_mb_s =
-        statistics.total_bytes_processed.get() as f64 / 1_000_000f64 / elapsed_secs.max(1) as f64;
+    let elapsed_duration = chrono::Duration::from_std(throughput_calculator.elapsed_time())?;
+    let elapsed_time = format!(
+        "{:02}:{:02}:{:02}",
+        elapsed_duration.num_hours(),
+        elapsed_duration.num_minutes(),
+        elapsed_duration.num_seconds()
+    );
+    let throughput_mb_s = throughput_calculator.calculate(statistics.total_bytes_processed.get());
     if is_tty {
         stdout_handle.queue(PrintStyledContent("Num docs: ".blue()))?;
         stdout_handle.queue(Print(format!("{:>7}", statistics.num_docs.get())))?;
@@ -377,20 +446,62 @@ fn display_statistics(
             statistics.total_bytes_processed.get() / 1_000_000
         )))?;
         stdout_handle.queue(PrintStyledContent(" Thrghput: ".blue()))?;
-        stdout_handle.queue(Print(format!("{:.2}MB/s\n", throughput_mb_s)))?;
+        stdout_handle.queue(Print(format!("{:>5.2}MB/s", throughput_mb_s)))?;
+        stdout_handle.queue(PrintStyledContent(" Time: ".blue()))?;
+        stdout_handle.queue(Print(format!("{}\n", elapsed_time)))?;
     } else {
         let report_line = format!(
-        "Num docs: {:>7} Parse errs: {:>5} Staged splits: {:>3} Input size: {:>5}MB Thrghput: {:.2}MB/s\n",
-        statistics.num_docs.get(),
-        statistics.num_parse_errors.get(),
-        statistics.num_staged_splits.get(),
-        statistics.total_bytes_processed.get() / 1_000_000,
-        throughput_mb_s,
-    );
+            "Num docs: {:>7} Parse errs: {:>5} Staged splits: {:>3} Input size: {:>5}MB Thrghput: {:>5.2}MB/s Time: {}\n",
+            statistics.num_docs.get(),
+            statistics.num_parse_errors.get(),
+            statistics.num_staged_splits.get(),
+            statistics.total_bytes_processed.get() / 1_000_000,
+            throughput_mb_s,
+            elapsed_time,
+        );
         stdout_handle.write_all(report_line.as_bytes())?;
     }
     stdout_handle.flush()?;
     Ok(())
+}
+
+/// ThroughputCalculator is used to calculate throughput.
+struct ThroughputCalculator {
+    /// Stores the time series of processed bytes value.
+    processed_bytes_values: VecDeque<(Instant, usize)>,
+    /// Store the time this calculator started
+    start_time: Instant,
+}
+
+impl ThroughputCalculator {
+    /// Creates new instance.
+    pub fn new(start_time: Instant) -> Self {
+        let processed_bytes_values: VecDeque<(Instant, usize)> = (0..THROUGHPUT_WINDOW_SIZE)
+            .map(|_| (start_time, 0usize))
+            .collect();
+        Self {
+            processed_bytes_values,
+            start_time,
+        }
+    }
+
+    /// Calculates the throughput.
+    pub fn calculate(&mut self, current_processed_bytes: usize) -> f64 {
+        self.processed_bytes_values.pop_front();
+        let current_instant = Instant::now();
+        let (first_instant, first_processed_bytes) = *self.processed_bytes_values.front().unwrap();
+        let elapsed_time = (current_instant - first_instant).as_millis() as f64 / 1_000f64;
+        self.processed_bytes_values
+            .push_back((current_instant, current_processed_bytes));
+
+        (current_processed_bytes - first_processed_bytes) as f64
+            / 1_000_000f64
+            / elapsed_time.max(1f64) as f64
+    }
+
+    pub fn elapsed_time(&self) -> Duration {
+        self.start_time.elapsed()
+    }
 }
 
 #[test]
