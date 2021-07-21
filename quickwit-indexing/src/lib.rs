@@ -20,6 +20,7 @@
 
 #[allow(missing_docs)]
 mod actors;
+mod sources;
 mod campaign;
 mod models;
 mod scheduling;

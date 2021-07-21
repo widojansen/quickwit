@@ -1,3 +1,12 @@
+use std::sync::Arc;
+
+use quickwit_actors::Mailbox;
+use quickwit_metastore::Checkpoint;
+
+use crate::models::Batch;
+use crate::models::SourceId;
+use crate::sources::SourceParams;
+
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -18,15 +27,15 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::time::Duration;
+pub trait Source {
+    fn spawn(&self) -> anyhow::Result<()>;
+}
 
-use crate::models::{IndexId, SourceId};
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct SourceConfig {
-    pub source_id: SourceId,
-    pub index_id: IndexId,
-    pub period: Duration,
-    pub metastore_uri: String,
-    pub storage_uri: String,
+pub async fn build_source(
+    source_id: &SourceId,
+    source_params: &SourceParams,
+    checkpoint: &Checkpoint,
+    writer_mailbox: Mailbox<Batch>,
+) -> anyhow::Result<Arc<dyn Source>> {
+    todo!();
 }

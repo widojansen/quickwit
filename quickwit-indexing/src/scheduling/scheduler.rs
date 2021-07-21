@@ -24,10 +24,10 @@ use tokio::task::JoinHandle;
 
 use crate::scheduling::scheduler_config::SchedulerConfig;
 use crate::scheduling::unique_queue::{unbounded_channel, Sender};
-use crate::scheduling::SourceConfig;
+use crate::scheduling::SourceIndexingConfig;
 
 pub fn start_scheduler(config: SchedulerConfig) -> JoinHandle<()> {
-    let (task_queue_tx, mut task_queue_rx) = unbounded_channel::<SourceConfig>();
+    let (task_queue_tx, mut task_queue_rx) = unbounded_channel::<SourceIndexingConfig>();
     for source_config in config.source_configs {
         let join = tokio::task::spawn(queue_tasks_periodically(
             task_queue_tx.clone(),
@@ -42,14 +42,14 @@ pub fn start_scheduler(config: SchedulerConfig) -> JoinHandle<()> {
 }
 
 async fn queue_tasks_periodically(
-    mut task_queue_tx: Sender<SourceConfig>,
-    source_config: SourceConfig,
+    mut task_queue_tx: Sender<SourceIndexingConfig>,
+    source_indexing_config: SourceIndexingConfig,
 ) {
     println!("queuetasksperiod");
-    let mut interval = tokio::time::interval(source_config.period);
+    let mut interval = tokio::time::interval(source_indexing_config.indexing_period);
     loop {
         interval.tick().await;
-        if task_queue_tx.send(source_config.clone()).await.is_err() {
+        if task_queue_tx.send(source_indexing_config.clone()).await.is_err() {
             // The scheduling task has stopped.
             break;
         }
@@ -61,18 +61,18 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
-    use crate::scheduling::SourceConfig;
+    use crate::scheduling::SourceIndexingConfig;
 
     #[tokio::test]
     async fn test_task_queues() {
-        let source_config_1 = SourceConfig {
+        let source_config_1 = SourceIndexingConfig {
             source_id: "source1".to_string(),
             index_id: "index1".to_string(),
             period: Duration::from_millis(100),
             metastore_uri: "".to_string(),
             storage_uri: "".to_string(),
         };
-        let source_config_2 = SourceConfig {
+        let source_config_2 = SourceIndexingConfig {
             source_id: "source2".to_string(),
             index_id: "index2".to_string(),
             period: Duration::from_millis(300),

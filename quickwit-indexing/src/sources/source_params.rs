@@ -18,12 +18,11 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod indexer;
-mod packager;
-mod publisher;
-mod uploader;
 
-pub(crate) use indexer::{Indexer, IndexerParams};
-pub(crate) use packager::Packager;
-pub(crate) use publisher::Publisher;
-pub(crate) use uploader::Uploader;
+/// Contains all of the information required to spawn a source task.
+#[derive(Debug, Clone)]
+pub struct SourceParams {
+    source_type: String,
+    params: serde_json::Value,
+}
+

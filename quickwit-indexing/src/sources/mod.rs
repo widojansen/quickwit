@@ -1,11 +1,3 @@
-use std::sync::Arc;
-
-use quickwit_actors::Mailbox;
-use quickwit_metastore::Checkpoint;
-
-use crate::models::Batch;
-use crate::models::SourceId;
-
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
 //
@@ -26,14 +18,9 @@ use crate::models::SourceId;
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub trait Source {
-    fn spawn(&self) -> anyhow::Result<()>;
-}
 
-pub(crate) async fn build_source(
-    _source_id: &SourceId,
-    _writer_mailbox: Mailbox<Batch>,
-    _checkpoint: &Checkpoint,
-) -> anyhow::Result<Arc<dyn Source>> {
-    todo!();
-}
+mod source;
+mod source_params;
+
+pub use source_params::SourceParams;
+pub use source::build_source;

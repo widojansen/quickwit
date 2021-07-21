@@ -26,17 +26,19 @@ use quickwit_actors::SyncActor;
 use quickwit_metastore::Metastore;
 use quickwit_storage::Storage;
 
-use crate::actors::build_source;
+use crate::sources::build_source;
 use crate::actors::Indexer;
 use crate::actors::IndexerParams;
 use crate::actors::Packager;
 use crate::actors::Publisher;
 use crate::actors::Uploader;
 use crate::models::SplitLabel;
+use crate::scheduling::SourceIndexingConfig;
 
 const MEM_BUDGET_IN_BYTES: usize = 2_000_000_000;
 
 pub struct Campaign {
+    source_config: SourceIndexingConfig,
     split_label: SplitLabel,
     storage: Arc<dyn Storage>,
     metastore: Arc<dyn Metastore>,
@@ -78,9 +80,10 @@ pub async fn run_campaign(campaign: Campaign) -> anyhow::Result<()> {
     let (writer_mailbox, _writer_handle) = writer.spawn(100, campaign_kill_switch.clone());
 
     let source = build_source(
-        &campaign.split_label.source,
-        writer_mailbox,
+        &campaign.source_config.source_id,
+        &campaign.source_config.source_params,
         &index_metadata.checkpoint,
+        writer_mailbox,
     )
     .await?;
     source.spawn()?;

@@ -1,4 +1,4 @@
-use crate::scheduling::SourceConfig;
+use crate::scheduling::SourceIndexingConfig;
 
 // Quickwit
 //  Copyright (C) 2021 Quickwit Inc.
@@ -22,5 +22,5 @@ use crate::scheduling::SourceConfig;
 
 #[derive(Clone, Debug)]
 pub struct SchedulerConfig {
-    pub source_configs: Vec<SourceConfig>,
+    pub source_configs: Vec<SourceIndexingConfig>,
 }

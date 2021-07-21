@@ -20,9 +20,9 @@
 
 mod scheduler;
 mod scheduler_config;
-mod source_config;
+mod source_indexing_config;
 mod unique_queue;
 
 pub use self::scheduler::start_scheduler;
 pub use self::scheduler_config::SchedulerConfig;
-pub use self::source_config::SourceConfig;
+pub use self::source_indexing_config::SourceIndexingConfig;
